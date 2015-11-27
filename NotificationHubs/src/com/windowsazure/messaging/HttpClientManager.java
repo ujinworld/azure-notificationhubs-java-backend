@@ -2,17 +2,25 @@ package com.windowsazure.messaging;
 
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.HttpHost;
 
 public class HttpClientManager {
 	private static CloseableHttpAsyncClient httpAsyncClient;
 	
-	public static CloseableHttpAsyncClient getHttpAsyncClient() {
+	public static CloseableHttpAsyncClient getHttpAsyncClient(String proxyHost, int proxyPort) {
 		if(httpAsyncClient == null) {
 			synchronized(HttpClientManager.class) {
 				if(httpAsyncClient == null) {
-					CloseableHttpAsyncClient client = HttpAsyncClients.createDefault();
+					CloseableHttpAsyncClient client = null;
+					if (proxyHost != null) {
+						// set proxy
+						HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+						client = HttpAsyncClients.custom().setProxy(proxy).build();
+					} else {
+						client = HttpAsyncClients.createDefault();
+					}
 					client.start();
-					httpAsyncClient = client;	    	   
+					httpAsyncClient = client;
 				}
 			}
 		}

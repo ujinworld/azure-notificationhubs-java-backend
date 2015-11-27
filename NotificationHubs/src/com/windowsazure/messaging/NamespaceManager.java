@@ -17,6 +17,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.nio.client.HttpAsyncClient;
 
 public class NamespaceManager {
 	private static final String IFMATCH_HEADER_NAME = "If-Match";
@@ -27,8 +28,13 @@ public class NamespaceManager {
 	private String endpoint;
 	private String SasKeyName;
 	private String SasKeyValue;
+	private String proxyHost;
+	private int proxyPort;
 
-	public NamespaceManager(String connectionString) {
+	public NamespaceManager(String connectionString, String proxyHost, int proxyPort) {
+		this.proxyHost = proxyHost;
+		this.proxyPort = proxyPort;
+
 		String[] parts = connectionString.split(";");
 		if (parts.length != 3)
 			throw new RuntimeException("Error parsing connection string: "
@@ -44,14 +50,18 @@ public class NamespaceManager {
 			}
 		}
 	}
-	
+
+	protected HttpAsyncClient getHttpAsyncClient() {
+		return HttpClientManager.getHttpAsyncClient(this.proxyHost, this.proxyPort);
+	}
+
 	public void getNotificationHubAsync(String hubPath, final FutureCallback<NotificationHubDescription> callback){
 		try {
 			URI uri = new URI(endpoint + hubPath + APIVERSION);
 			final HttpGet get = new HttpGet(uri);
 			get.setHeader(AUTHORIZATION_HEADER_NAME, generateSasToken(uri));
 			
-			HttpClientManager.getHttpAsyncClient().execute(get, new FutureCallback<HttpResponse>() {
+			getHttpAsyncClient().execute(get, new FutureCallback<HttpResponse>() {
 		        public void completed(final HttpResponse response) {
 		        	try{
 		        		if (response.getStatusLine().getStatusCode() != 200) {
@@ -92,7 +102,7 @@ public class NamespaceManager {
 			final HttpGet get = new HttpGet(uri);
 			get.setHeader(AUTHORIZATION_HEADER_NAME, generateSasToken(uri));
 			
-			HttpClientManager.getHttpAsyncClient().execute(get, new FutureCallback<HttpResponse>() {
+			getHttpAsyncClient().execute(get, new FutureCallback<HttpResponse>() {
 		        public void completed(final HttpResponse response) {
 		        	try{
 		        		if (response.getStatusLine().getStatusCode() != 200) {
@@ -160,7 +170,7 @@ public class NamespaceManager {
 			entity.setContentEncoding("utf-8");
 			put.setEntity(entity);
 			
-			HttpClientManager.getHttpAsyncClient().execute(put, new FutureCallback<HttpResponse>() {
+			getHttpAsyncClient().execute(put, new FutureCallback<HttpResponse>() {
 		        public void completed(final HttpResponse response) {
 		        	try{
 		        		if (response.getStatusLine().getStatusCode() != (isUpdate ? 200 : 201)) {
@@ -195,7 +205,7 @@ public class NamespaceManager {
 			final HttpDelete delete = new HttpDelete(uri);
 			delete.setHeader(AUTHORIZATION_HEADER_NAME, generateSasToken(uri));
 			
-			HttpClientManager.getHttpAsyncClient().execute(delete, new FutureCallback<HttpResponse>() {
+			getHttpAsyncClient().execute(delete, new FutureCallback<HttpResponse>() {
 		        public void completed(final HttpResponse response) {
 		        	try{
 		        		if (response.getStatusLine().getStatusCode() != 200 && response.getStatusLine().getStatusCode() != 404) {
